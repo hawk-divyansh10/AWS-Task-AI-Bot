@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud-Native Task Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body {
+            background: linear-gradient(135deg, #0f4c81 0%, #1d7a8c 40%, #e67e22 100%);
+            min-height: 100vh; color: #fff; display: flex; flex-direction: column; position: relative; padding-bottom: 60px;
+        }
+        .top-bar {
+            background: rgba(15, 76, 129, 0.9); padding: 10px 5%; display: flex; justify-content: space-between; font-size: 0.85rem; border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        header {
+            background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(10px); padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .logo-area { display: flex; align-items: center; gap: 10px; }
+        .logo-icon { background: #fff; color: #0f4c81; padding: 6px 12px; border-radius: 8px; font-weight: bold; }
+        .live-badge { background: #e67e22; padding: 8px 18px; border-radius: 20px; font-weight: 600; font-size: 0.9rem; border: none; color: white; }
+        
+        .hero-container { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 30px 20px; }
+        .architecture-pill { background: rgba(255, 255, 255, 0.18); padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; margin-bottom: 15px; border: 1px solid rgba(255, 255, 255, 0.2); letter-spacing: 1px; }
+        .hero-title { font-size: 2.6rem; font-weight: 700; text-align: center; margin-bottom: 10px; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .hero-subtitle { font-size: 1.05rem; opacity: 0.9; margin-bottom: 25px; text-align: center; }
+        
+        .dashboard-layout { display: flex; gap: 30px; width: 100%; max-width: 1100px; justify-content: center; align-items: flex-start; }
+        
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(12px); padding: 25px; border-radius: 16px; width: 650px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.25);
+        }
+        .input-wrapper { display: flex; gap: 10px; margin-bottom: 20px; }
+        .input-wrapper input { flex: 1; padding: 14px; border-radius: 8px; border: none; background: rgba(255,255,255,0.95); color: #333; font-size: 0.95rem; outline: none; }
+        .input-wrapper select { padding: 14px; border-radius: 8px; border: none; background: white; color:#333; font-weight: 600; outline: none; }
+        .input-wrapper button { background: #e67e22; color: white; border: none; padding: 0 24px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        
+        .task-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+        .task-item { background: rgba(255, 255, 255, 0.95); color: #333; padding: 12px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .task-item.completed .task-text { text-decoration: line-through; opacity: 0.5; }
+        .task-left { display: flex; align-items: center; gap: 12px; cursor: pointer; flex: 1; }
+        .priority-badge { padding: 3px 9px; border-radius: 12px; font-size: 0.7rem; font-weight: bold; color: white; }
+        .priority-High { background: #e74c3c; }
+        .priority-Medium { background: #f39c12; }
+        .priority-Low { background: #2ecc71; }
+        .delete-btn { background: none; border: none; color: #c0392b; font-size: 1.2rem; cursor: pointer; font-weight: bold; }
+
+        .ai-panel-card {
+            width: 350px; background: rgba(10, 30, 55, 0.95); border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); padding: 20px; display: flex; flex-direction: column; height: 380px;
+        }
+        .ai-panel-title { font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 8px; margin-bottom: 12px; color: #e67e22; }
+        .chat-stream { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; padding-right: 5px; }
+        .chat-msg { padding: 10px 12px; border-radius: 8px; font-size: 0.85rem; max-width: 85%; line-height: 1.4; }
+        .chat-msg.user { background: #1d7a8c; align-self: flex-end; text-align: right; color: white; }
+        .chat-msg.bot { background: rgba(255,255,255,0.1); align-self: flex-start; color: white; }
+        .ai-input-box { display: flex; gap: 8px; }
+        .ai-input-box input { flex: 1; padding: 10px; border-radius: 6px; border: none; outline: none; font-size: 0.85rem; }
+        .ai-input-box button { background: #e67e22; border: none; color: white; padding: 0 15px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+
+        .stats-footer {
+            background: #fff; color: #333; width: 100%; padding: 15px 5%; display: flex; justify-content: space-between; position: fixed; bottom: 0; left: 0; border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
+        }
+        .stat-item { text-align: center; flex: 1; }
+        .stat-item h3 { font-size: 1.6rem; color: #0f4c81; font-weight: 700; }
+        .stat-item p { font-size: 0.8rem; color: #666; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <div><span>📞 Host IP: 13.60.217.151</span> &nbsp;&nbsp; <span id="live-date"></span></div>
+        <div><span>Status: <strong style="color: #2ecc71;">● Container Active</strong></span></div>
+    </div>
+
+    <header>
+        <div class="logo-area">
+            <div class="logo-icon">🐳</div>
+            <div><h3>CloudTask AI Dashboard</h3><p style="font-size:0.65rem; opacity:0.7;">Docker & AWS Scalable Node</p></div>
+        </div>
+        <button class="live-badge">AWS EC2 Live</button>
+    </header>
+
+    <div class="hero-container">
+        <div class="architecture-pill">⚡ Pipeline: Docker Image ➔ EC2 Cluster</div>
+        <h2 class="hero-title">Intelligent Cloud-Native Dashboard</h2>
+        <p class="hero-subtitle">High-performance microservices environment with live data rendering.</p>
+
+        <div class="dashboard-layout">
+            <div class="dashboard-card">
+                <div class="input-wrapper">
+                    <input type="text" id="task-text" placeholder="Enter microservices runtime objective...">
+                    <select id="task-priority">
+                        <option value="High">High</option>
+                        <option value="Medium" selected>Medium</option>
+                        <option value="Low">Low</option>
+                    </select>
+                    <button onclick="addTask()">Add</button>
+                </div>
+                <ul class="task-list" id="task-list-ui"></ul>
+            </div>
+
+            <div class="ai-panel-card">
+                <div class="ai-panel-title">🤖 CloudTask AI Engine Active</div>
+                <div class="chat-stream" id="chat-stream">
+                    <div class="chat-msg bot">Hello! Ask me to "prioritize tasks" or analyze container status.</div>
+                </div>
+                <div class="ai-input-box">
+                    <input type="text" id="chat-input" placeholder="Ask AI..." onkeypress="if(event.key==='Enter') sendPrompt()">
+                    <button onclick="sendPrompt()">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="stats-footer">
+        <div class="stat-item"><h3 id="count-total">0</h3><p>Total Node Tasks</p></div>
+        <div class="stat-item"><h3 id="count-pending">0</h3><p>Pending Actions</p></div>
+        <div class="stat-item"><h3>&lt; 10ms</h3><p>Docker Local Latency</p></div>
+        <div class="stat-item"><h3 style="color:#2ecc71;">Online</h3><p>EC2 Cluster Status</p></div>
+    </footer>
+
+    <script>
+        document.getElementById('live-date').innerText = "📅 " + new Date().toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric'});
+
+        async function fetchTasks() {
+            const res = await fetch('/api/tasks');
+            const tasks = await res.json();
+            const listUI = document.getElementById('task-list-ui');
+            listUI.innerHTML = '';
+            
+            let pendingCount = 0;
+            tasks.forEach(task => {
+                if(!task.completed) pendingCount++;
+                listUI.innerHTML += `
+                    <li class="task-item ${task.completed ? 'completed' : ''}">
+                        <div class="task-left" onclick="toggleTask(${task.id})">
+                            <span class="priority-badge priority-${task.priority}">${task.priority}</span>
+                            <span class="task-text">${task.text}</span>
+                        </div>
+                        <button class="delete-btn" onclick="deleteTask(${task.id})">×</button>
+                    </li>
+                `;
+            });
+            document.getElementById('count-total').innerText = tasks.length;
+            document.getElementById('count-pending').innerText = pendingCount;
+        }
+
+        async function addTask() {
+            const text = document.getElementById('task-text').value.trim();
+            const priority = document.getElementById('task-priority').value;
+            if(!text) return;
+            await fetch('/api/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, priority })
+            });
+            document.getElementById('task-text').value = '';
+            fetchTasks();
+        }
+
+        async function toggleTask(id) {
+            await fetch(`/api/tasks/${id}`, { method: 'PATCH' });
+            fetchTasks();
+        }
+
+        async function deleteTask(id) {
+            await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+            fetchTasks();
+        }
+
+        async function sendPrompt() {
+            const inputEl = document.getElementById('chat-input');
+            const text = inputEl.value.trim();
+            if(!text) return;
+            
+            const stream = document.getElementById('chat-stream');
+            stream.innerHTML += `<div class="chat-msg user">${text}</div>`;
+            inputEl.value = '';
+            stream.scrollTop = stream.scrollHeight;
+
+            const res = await fetch('/api/ai/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await res.json();
+            stream.innerHTML += `<div class="chat-msg bot">${data.reply}</div>`;
+            stream.scrollTop = stream.scrollHeight;
+        }
+
+        fetchTasks();
+    </script>
+</body>
+</html>
